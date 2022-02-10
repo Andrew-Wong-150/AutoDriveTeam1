@@ -8,7 +8,7 @@ correct_yellow = 0
 undefined = 0
 total_images = 0
 
-filename = r"C:\Users\nwalt\source\repos\traffic_light_images\image_TL_color\green"
+filename = r"C:\Users\nwalt\source\repos\traffic_light_images\sorted\GreenLeft"
 
 os.chdir(filename)
 for images in os.listdir(filename):
@@ -20,19 +20,33 @@ for images in os.listdir(filename):
         total_red = float(0)
         total_yellow = float(0)
         total_green = float(0)
+        red_high = 0
+        blue_high = 0
+        green_high = 0
+
+        for i in range(2, h-1):
+            for j in range(2, w-1):
+                red, green, blue = img.getpixel((j,i))
+                if red > red_high:
+                    red_high = red
+                if green > green_high:
+                    green_high = green
+                elif blue > blue_high:
+                    blue_high = blue
+        scale_factor = 256.0/((red_high+green_high+blue_high)/3)
 
         for i in range(2, h-1):
             for j in range(2, w-1):
                 red, green, _ = img.getpixel((j,i))
-                if red-green >= 125:
+                if red-green >= 125/scale_factor:
                     red_pixel = 2
                     green_pixel = 0
                     yellow_pixel = 0
-                elif green-red >= 125:
+                elif green-red >= 125/scale_factor:
                     green_pixel = 2
                     red_pixel = 0
                     yellow_pixel = 0
-                elif (abs(green-red)<50) & (green >= 150) & (red >= 150):
+                elif (abs(green-red)<50/scale_factor) & (green >= 150/scale_factor) & (red >= 150/scale_factor):
                     yellow_pixel = 2
                     red_pixel = 0
                     green_pixel = 0
@@ -45,7 +59,7 @@ for images in os.listdir(filename):
                 total_green += green_pixel*((h-i)**2+(w/2-abs(j-w/2))**2)/256
 
         if total_yellow != 0:
-            total_yellow = total_yellow**(1/2)
+            total_yellow = total_yellow**(1/1.8)
         if (total_red != 0) | (total_green != 0) | (total_yellow != 0):
             avg_red = total_red/(total_red+total_yellow+total_green)
             avg_yellow = total_yellow/(total_red+total_yellow+total_green)
@@ -72,7 +86,7 @@ for images in os.listdir(filename):
             print('yellow\n')
             correct_yellow += 1
 
-percent_correct = correct_red/total_images
+percent_correct = correct_green/total_images
 print('\n\nRed:', correct_red)
 print('Yellow:', correct_yellow)
 print('Green:', correct_green)
