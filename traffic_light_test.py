@@ -1,6 +1,7 @@
 from PIL import Image
 import os
 from os import listdir
+import time
 
 correct_red = 0
 correct_green = 0
@@ -8,8 +9,8 @@ correct_yellow = 0
 undefined = 0
 total_images = 0
 
-filename = r"C:\Users\nwalt\source\repos\traffic_light_images\sorted\GreenLeft"
-
+filename = r"C:\Users\nwalt\source\repos\traffic_light_images\Mcity_image_TL_ssd\yellow"
+t0 = time.time()
 os.chdir(filename)
 for images in os.listdir(filename):
     if (images.endswith(".jpg") or images.endswith(".png") or images.endswith(".jpeg")):
@@ -85,11 +86,12 @@ for images in os.listdir(filename):
         else:
             print('yellow\n')
             correct_yellow += 1
-
-percent_correct = correct_green/total_images
+t1 = time.time()
+percent_correct = correct_yellow/total_images
 print('\n\nRed:', correct_red)
 print('Yellow:', correct_yellow)
 print('Green:', correct_green)
 print('Unknown:', undefined)
 print('Total:', total_images)
 print('Percent Accuracy:', percent_correct)
+print('Avg Time Per Image: ', (t1-t0)/total_images)
