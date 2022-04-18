@@ -43,13 +43,13 @@ for z in range(1):
                         green_high = green
                     if blue > blue_high:
                         blue_high = blue
-            scale_factor = 256.0/(red_high)
+            scale_factor = (red_high)/256.0
 
             for i in range(w):
                 for j in range(h):
                     red, green, blue = img.getpixel((i,j))
 
-                    if red > 80*scale_factor and green < red*0.5 and blue < red*0.5:
+                    if red > 200*scale_factor and green < red*0.5 and blue < red*0.5:
                         if i < left_x:
                             left_x = i
                         if i > right_x:
