@@ -9,10 +9,9 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.utils.tensorboard import SummaryWriter
 
-root = r'C:\Users\Andrew\Documents\AutoDrive\Color and Bulb Training\Old'
+root = r'C:\Users\Andrew\Documents\AutoDrive\Color and Bulb Training\Old Data'
 device_string = "cuda" if torch.cuda.is_available() else "cpu"
 device = torch.device(device_string)
-num_classes = 3
 classes = {0: 'Green',
            1: 'Red',
            2: 'Yellow'}
@@ -43,27 +42,19 @@ def split_data():
         transforms.Compose([
             #cv_transform(),
             transforms.Resize((224, 224)),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
     )
     
-    train_size = int(0.6 * len(dataset))
-    val_size = int(0.2 * len(dataset))
-    test_size = len(dataset) - train_size - val_size
-    
-    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size + val_size, test_size])
-    train_dataset, val_dataset = torch.utils.data.random_split(train_dataset, [train_size, val_size])
+    train_size = int(0.8 * len(dataset))
+    test_size = len(dataset) - train_size
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
     
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=64,
-        shuffle=True,
-        num_workers=0
-    )
-    
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset,
         batch_size=64,
         shuffle=True,
         num_workers=0
@@ -77,7 +68,7 @@ def split_data():
     )
     
     
-    return train_loader, val_loader, test_loader
+    return train_loader, test_loader
 
 
 def evaluate(model, loader, num_classes):
@@ -95,23 +86,24 @@ def evaluate(model, loader, num_classes):
         correct[y[i]] += torch.eq(pred[i], y[i]).sum().float().item()
     
     accuracies = [i / j if j != 0 else None for i, j in zip(correct, count)]
-    print("accuracy_by_class\n", accuracies)
     return sum(correct)/sum(count), accuracies
 
 
 def run():
     
-    train_loader, val_loader, test_loader = split_data()
+    train_loader, test_loader = split_data()
     
+    #model = models.resnet18(pretrained=True)
+    #model.fc = torch.nn.Linear(model.fc.in_features, len(classes))
     model = models.mobilenet_v3_small(pretrained=True)
-    model.classifier[3] = torch.nn.Linear(model.classifier[3].in_features, num_classes)
+    model.classifier[-1] = torch.nn.Linear(model.classifier[-1].in_features, len(classes))
     model = model.to(device)
     
-    NUM_EPOCHS = 16
-    BEST_MODEL_PATH = 'color_classifier_no_generated.pth'
+    NUM_EPOCHS = 30
+    BEST_MODEL_PATH = 'new_transforms.pth'
     best_accuracy = 0.0
     
-    writer = SummaryWriter('runs/color_classifier_no_generated')
+    writer = SummaryWriter('runs/new_transforms')
     
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     
@@ -126,22 +118,25 @@ def run():
             loss.backward()
             optimizer.step()
         
-        val_acc, val_class_acc = evaluate(model, val_loader, num_classes)
-        train_acc, train_class_acc = evaluate(model, train_loader, num_classes)
-        writer.add_scalars('val/acc', {'avg': val_acc,
-                                      classes[0]: val_class_acc[0],
-                                      classes[1]: val_class_acc[1],
-                                      classes[2]: val_class_acc[2]}, epoch)
+        test_acc, test_class_acc = evaluate(model, test_loader, len(classes))
+        train_acc, train_class_acc = evaluate(model, train_loader, len(classes))
+        writer.add_scalars('test/acc', {'avg': test_acc,
+                                      classes[0]: test_class_acc[0],
+                                      classes[1]: test_class_acc[1],
+                                      classes[2]: test_class_acc[2]}, epoch)
         writer.add_scalars('train/acc', {'avg': train_acc,
                                       classes[0]: train_class_acc[0],
                                       classes[1]: train_class_acc[1],
                                       classes[2]: train_class_acc[2]}, epoch)
         
-        if val_acc > best_accuracy:
-            torch.save(model.state_dict(), BEST_MODEL_PATH)
-            best_accuracy = val_acc
+        print("test accuracy by class:\n", test_class_acc)
         
-        if all(i >= 0.99 for i in val_class_acc) and epoch > 5:
+        if test_acc > best_accuracy:
+            torch.save(model.state_dict(), BEST_MODEL_PATH)
+            best_accuracy = test_acc
+        
+        if all(i >= 0.98 for i in test_class_acc) and epoch > 10:
+            print('Exit Early')
             break
             
     writer.close()

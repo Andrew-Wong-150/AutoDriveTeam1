@@ -6,10 +6,14 @@ import torchvision.transforms as transforms
 
 
 # load model with transferred learning weights
-test_model = models.mobilenet_v3_small(pretrained=True)
-test_model.classifier[3] = torch.nn.Linear(test_model.classifier[3].in_features, 3)
-test_model.load_state_dict(torch.load('color_classifier_no_generated.pth'))
-test_model.eval()
+classes = ['Red', 'Yellow', 'Green']
+#model = models.resnet18(pretrained=True)
+#model.fc = torch.nn.Linear(model.fc.in_features, len(classes))
+#model.load_state_dict(torch.load('ResNet18.pth'))
+model = models.mobilenet_v3_small(pretrained=True)
+model.classifier[-1] = torch.nn.Linear(model.classifier[-1].in_features, len(classes))
+model.load_state_dict(torch.load('new_transforms.pth'))
+model.eval()
 
 
 def image_loader(image):
@@ -35,7 +39,7 @@ def predict(image_path):
     
      #evaluate
     with torch.no_grad():
-        output = torch.nn.functional.softmax(test_model(image), dim=1)
+        output = torch.nn.functional.softmax(model(image), dim=1)
     
     # define labels
     label_map = ['Green', 'Red', 'Yellow']
@@ -52,11 +56,10 @@ def predict(image_path):
     
     
 def test():
-
-    colors = ['Red', 'Yellow', 'Green']
+    
     base_path = r'C:\Users\Andrew\Documents\AutoDrive\Color and Bulb Training\New Test'
     
-    for color in colors:
+    for color in classes:
     
         path = os.path.join(base_path, color)
         counter = 0
@@ -67,7 +70,7 @@ def test():
             result = predict(os.path.join(path, file))
             
             if color != result:
-                #print(file, result)
+                print(file, result)
                 missed += 1
             
         print('{:<10}: {}/{} = {:.2f}%'.format(color, counter - missed, counter, (1 - (missed/counter)) * 100))
